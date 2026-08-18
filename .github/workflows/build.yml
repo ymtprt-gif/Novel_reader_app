@@ -20,16 +20,28 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Make gradlew executable
-        working-directory: ./Novel_reader_app/Novel_reader/app/ # ?? ここを追加
-        run: chmod +x gradlew
+      - name: Find Project Directory & Build APK
+        run: |
+          # リポジトリ内から build.gradle または settings.gradle を探して移動
+          PROJECT_DIR=$(find . -maxdepth 3 -name "settings.gradle*" -exec dirname {} \; | head -n 1)
+          if [ -z "$PROJECT_DIR" ]; then
+            PROJECT_DIR="."
+          fi
+          echo "Project found in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
 
-      - name: Build APK with Gradle
-        working-directory: ./Novel_reader_app/Novel_reader/app/ # ?? ここを追加
-        run: ./gradlew assembleDebug
+          # gradlew が無ければ自動生成する
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew not found. Generating wrapper..."
+            gradle wrapper
+          fi
+
+          # 実行権限の付与とビルド実行
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: android/app/build/outputs/apk/debug/*.apk # ?? パスを変更
+          path: "/**/build/outputs/apk/debug/*.apk"
